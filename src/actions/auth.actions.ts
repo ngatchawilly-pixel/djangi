@@ -1,0 +1,126 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+} from '@/lib/validators'
+import { createClient } from '@/lib/supabase/server'
+
+export type ActionState = { error?: string; success?: string }
+
+export async function login(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = loginSchema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithPassword(parsed.data)
+
+  if (error) {
+    // Exigence 1.3 : message explicite, mais sans révéler si l'email existe.
+    return { error: 'Email ou mot de passe incorrect' }
+  }
+
+  const redirectTo = String(formData.get('redirectTo') || '/dashboard')
+  revalidatePath('/', 'layout')
+  redirect(redirectTo.startsWith('/') ? redirectTo : '/dashboard')
+}
+
+export async function register(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = registerSchema.safeParse({
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+    confirmPassword: formData.get('confirmPassword'),
+    role: formData.get('role'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signUp({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    options: {
+      // Lues par handle_new_user(). Le rôle y est filtré côté base : impossible
+      // d'obtenir 'Super_Admin' en trafiquant ce formulaire.
+      data: {
+        first_name: parsed.data.firstName,
+        last_name: parsed.data.lastName,
+        role: parsed.data.role,
+      },
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return {
+    success:
+      'Compte créé. Vérifiez votre boîte mail si une confirmation est demandée, puis connectez-vous.',
+  }
+}
+
+export async function requestPasswordReset(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get('email') })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const origin = (await headers()).get('origin') ?? ''
+
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  })
+
+  // Réponse identique que l'email existe ou non : évite l'énumération de comptes.
+  return {
+    success:
+      'Si un compte existe pour cette adresse, un lien de réinitialisation vient d’être envoyé.',
+  }
+}
+
+export async function updatePassword(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const password = String(formData.get('password') ?? '')
+  if (password.length < 8) {
+    return { error: 'Minimum 8 caractères' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) return { error: error.message }
+
+  redirect('/dashboard')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
+}
