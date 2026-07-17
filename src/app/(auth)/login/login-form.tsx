@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 import { login, type ActionState } from '@/actions/auth.actions'
-import { Alert, Button, Input, Label } from '@/components/ui'
+import { Alert, Button, FieldError, Input, Label } from '@/components/ui'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -21,11 +21,14 @@ function SubmitButton() {
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(login, {})
   const [showPassword, setShowPassword] = useState(false)
+  const err = state.fieldErrors ?? {}
 
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="redirectTo" value={redirectTo} />
 
+      {/* Erreur globale : identifiants refusés par Supabase. Les erreurs de
+          format, elles, s'affichent sous leur champ. */}
       {state.error && <Alert>{state.error}</Alert>}
 
       <div>
@@ -37,7 +40,9 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           autoComplete="email"
           required
           placeholder="vous@exemple.com"
+          aria-invalid={!!err.email}
         />
+        <FieldError>{err.email}</FieldError>
       </div>
 
       <div>
@@ -50,6 +55,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
             autoComplete="current-password"
             required
             className="pr-11"
+            aria-invalid={!!err.password}
           />
           <button
             type="button"
@@ -62,6 +68,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
             {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
+        <FieldError>{err.password}</FieldError>
         <div className="mt-2 text-right">
           <Link
             href="/forgot-password"

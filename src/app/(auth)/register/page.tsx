@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom'
 import { Loader2 } from 'lucide-react'
 
 import { register, type ActionState } from '@/actions/auth.actions'
-import { Alert, Button, Input, Label, Select } from '@/components/ui'
+import { Alert, Button, FieldError, Input, Label, Select } from '@/components/ui'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -20,6 +20,7 @@ function SubmitButton() {
 
 export default function RegisterPage() {
   const [state, formAction] = useActionState<ActionState, FormData>(register, {})
+  const err = state.fieldErrors ?? {}
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
@@ -35,17 +36,39 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="firstName">Prénom</Label>
-            <Input id="firstName" name="firstName" required autoComplete="given-name" />
+            <Input
+              id="firstName"
+              name="firstName"
+              required
+              autoComplete="given-name"
+              aria-invalid={!!err.firstName}
+            />
+            <FieldError>{err.firstName}</FieldError>
           </div>
           <div>
             <Label htmlFor="lastName">Nom</Label>
-            <Input id="lastName" name="lastName" required autoComplete="family-name" />
+            <Input
+              id="lastName"
+              name="lastName"
+              required
+              autoComplete="family-name"
+              aria-invalid={!!err.lastName}
+            />
+            <FieldError>{err.lastName}</FieldError>
           </div>
         </div>
 
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            aria-invalid={!!err.email}
+          />
+          <FieldError>{err.email}</FieldError>
         </div>
 
         <div>
@@ -69,7 +92,9 @@ export default function RegisterPage() {
             required
             minLength={8}
             autoComplete="new-password"
+            aria-invalid={!!err.password}
           />
+          <FieldError>{err.password}</FieldError>
         </div>
 
         <div>
@@ -81,7 +106,9 @@ export default function RegisterPage() {
             required
             minLength={8}
             autoComplete="new-password"
+            aria-invalid={!!err.confirmPassword}
           />
+          <FieldError>{err.confirmPassword}</FieldError>
         </div>
 
         <SubmitButton />

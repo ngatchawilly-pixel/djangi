@@ -9,9 +9,14 @@ import {
   loginSchema,
   registerSchema,
 } from '@/lib/validators'
+import { toFieldErrors } from '@/lib/form-errors'
 import { createClient } from '@/lib/supabase/server'
 
-export type ActionState = { error?: string; success?: string }
+export type ActionState = {
+  error?: string
+  success?: string
+  fieldErrors?: Record<string, string>
+}
 
 export async function login(
   _prev: ActionState,
@@ -22,7 +27,7 @@ export async function login(
     password: formData.get('password'),
   })
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+    return { fieldErrors: toFieldErrors(parsed.error.issues) }
   }
 
   const supabase = await createClient()
@@ -51,7 +56,7 @@ export async function register(
     role: formData.get('role'),
   })
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+    return { fieldErrors: toFieldErrors(parsed.error.issues) }
   }
 
   const supabase = await createClient()
