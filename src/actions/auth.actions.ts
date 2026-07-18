@@ -34,6 +34,16 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
 
   if (error) {
+    // « Email non confirmé » est distingué du reste : c'est une impasse que
+    // l'utilisateur ne peut pas résoudre seul s'il ne sait pas ce qui bloque.
+    // Cela révèle que le compte existe, mais quiconque voit ce message vient
+    // justement de tenter de le créer — la fuite est théorique.
+    if (error.code === 'email_not_confirmed') {
+      return {
+        error:
+          'Votre adresse email n’est pas confirmée. Vérifiez le lien reçu par email.',
+      }
+    }
     // Exigence 1.3 : message explicite, mais sans révéler si l'email existe.
     return { error: 'Email ou mot de passe incorrect' }
   }
