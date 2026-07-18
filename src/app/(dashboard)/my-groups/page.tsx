@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Dices } from 'lucide-react'
+import { ChevronRight, Dices } from 'lucide-react'
 
 import { requireProfile } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
@@ -10,7 +10,7 @@ export default async function MyGroupsPage() {
   const profile = await requireProfile()
   const supabase = await createClient()
 
-  // Fiches membres rattachées à ce compte (via handle_new_user, par email).
+  // Fiches membres rattachées à ce compte (par email, cf. handle_new_user).
   const { data: memberships } = await supabase
     .from('members')
     .select('id, group_id, status, tontine_groups(id, name, contribution_amount, currency)')
@@ -30,110 +30,61 @@ export default async function MyGroupsPage() {
 
   const groupIds = memberships.map((m) => m.group_id)
 
-  // Saisons ouvertes au tirage dans ces groupes.
+  // Simple indicateur « tirage en cours » par groupe : le détail (et l'action)
+  // se trouve à l'intérieur du groupe, pas ici.
   const { data: drawingSeasons } = await supabase
     .from('seasons')
-    .select('id, name, year, group_id, status')
+    .select('group_id')
     .in('group_id', groupIds)
     .eq('status', 'drawing')
 
-  // Numéros déjà tirés par ce membre.
-  const { data: myDrawings } = await supabase
-    .from('drawings')
-    .select('season_id, drawn_number')
-    .in(
-      'member_id',
-      memberships.map((m) => m.id),
-    )
-
-  const drawnBySeason = new Map(
-    myDrawings?.map((d) => [d.season_id, d.drawn_number]) ?? [],
-  )
-
-  // Positions finalisées.
-  const { data: positions } = await supabase
-    .from('beneficiary_orders')
-    .select('position, season_id, member_id, seasons(name, year, group_id, status)')
-    .in(
-      'member_id',
-      memberships.map((m) => m.id),
-    )
+  const groupsWithOpenDraw = new Set(drawingSeasons?.map((s) => s.group_id) ?? [])
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Mes participations</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Mes participations</h1>
+        <p className="text-sm text-muted-foreground">
+          Ouvrez un groupe pour voir son actualité et, le cas échéant, tirer votre numéro.
+        </p>
+      </div>
 
-      {!!drawingSeasons?.length && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium">Tirage ouvert</h2>
-          {drawingSeasons.map((s) => {
-            const already = drawnBySeason.get(s.id)
-            return (
-              <Card key={s.id} className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium">
-                    {s.name} · {s.year}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {already
-                      ? `Vous avez tiré le numéro ${already}.`
-                      : 'Vous n’avez pas encore tiré votre numéro.'}
-                  </p>
-                </div>
-                {already ? (
-                  <Badge tone="success">Numéro {already}</Badge>
-                ) : (
-                  <Link
-                    href={`/draw/${s.id}`}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-500 px-4 text-sm font-medium text-white hover:bg-primary-600"
-                  >
-                    <Dices className="size-4" /> Tirer mon numéro
-                  </Link>
-                )}
-              </Card>
-            )
-          })}
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Mes groupes</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {memberships.map((m) => {
-            const g = m.tontine_groups as unknown as {
-              id: string
-              name: string
-              contribution_amount: number
-              currency: string
-            }
-            const pos = positions?.find(
-              (p) =>
-                (p.seasons as unknown as { group_id: string })?.group_id === m.group_id,
-            )
-            return (
-              <li key={m.id}>
-                <Card>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{g.name}</p>
-                    <Badge tone={m.status === 'active' ? 'success' : 'neutral'}>
-                      {m.status === 'active' ? 'Actif' : m.status}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Cotisation {formatMoney(Number(g.contribution_amount), g.currency)}
-                  </p>
-                  {pos && (
-                    <p className="mt-3 text-sm">
-                      Votre position :{' '}
-                      <strong className="text-primary-600">#{pos.position}</strong>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {memberships.map((m) => {
+          const g = m.tontine_groups as unknown as {
+            id: string
+            name: string
+            contribution_amount: number
+            currency: string
+          }
+          const hasOpenDraw = groupsWithOpenDraw.has(m.group_id)
+          return (
+            <li key={m.id}>
+              <Link href={`/my-groups/${m.group_id}`} className="block h-full">
+                <Card className="flex h-full items-center gap-3 transition-colors hover:border-primary-400">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{g.name}</p>
+                      {hasOpenDraw && (
+                        <Badge tone="warning">
+                          <Dices className="mr-1 size-3" /> Tirage en cours
+                        </Badge>
+                      )}
+                      <Badge tone={m.status === 'active' ? 'success' : 'neutral'}>
+                        {m.status === 'active' ? 'Actif' : m.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Cotisation {formatMoney(Number(g.contribution_amount), g.currency)}
                     </p>
-                  )}
+                  </div>
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
                 </Card>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
