@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, LayoutGrid, LogOut, Users } from 'lucide-react'
+import { Home, LayoutGrid, LogOut, Settings, Users } from 'lucide-react'
 
 import { logout } from '@/actions/auth.actions'
 import { requireProfile } from '@/lib/auth/dal'
@@ -44,6 +44,13 @@ export default async function DashboardLayout({
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {profile.first_name ?? profile.email}
             </span>
+            <Link
+              href="/settings"
+              aria-label="Paramètres"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+            >
+              <Settings className="size-4" />
+            </Link>
             <form action={logout}>
               <Button variant="ghost" size="sm" type="submit" aria-label="Se déconnecter">
                 <LogOut className="size-4" />

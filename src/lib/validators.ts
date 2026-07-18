@@ -32,6 +32,21 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email('Adresse email invalide'),
 })
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
+    newPassword: z.string().min(8, 'Minimum 8 caractères'),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['confirmPassword'],
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    message: 'Le nouveau mot de passe doit être différent de l’actuel',
+    path: ['newPassword'],
+  })
+
 export const groupSchema = z.object({
   name: z.string().min(1, 'Nom requis').max(120),
   description: z.string().max(1000).optional().or(z.literal('')),

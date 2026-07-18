@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -131,6 +132,52 @@ export async function updatePassword(
   if (error) return { error: error.message }
 
   redirect('/dashboard')
+}
+
+/**
+ * Changement de mot de passe par un utilisateur connecté (exigence 1.5).
+ * On revérifie le mot de passe actuel avant d'en poser un nouveau : sans ça,
+ * quiconque accède à une session ouverte pourrait le changer sans le connaître.
+ */
+export async function changePassword(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get('currentPassword'),
+    newPassword: formData.get('newPassword'),
+    confirmPassword: formData.get('confirmPassword'),
+  })
+  if (!parsed.success) {
+    return { fieldErrors: toFieldErrors(parsed.error.issues) }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user?.email) {
+    return { error: 'Session expirée. Reconnectez-vous.' }
+  }
+
+  // Re-preuve d'identité : une tentative de connexion avec le mot de passe actuel.
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: parsed.data.currentPassword,
+  })
+  if (verifyError) {
+    return { fieldErrors: { currentPassword: 'Mot de passe actuel incorrect' } }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.newPassword,
+  })
+  if (error) {
+    return { error: 'Impossible de mettre à jour le mot de passe.' }
+  }
+
+  return { success: 'Votre mot de passe a été mis à jour.' }
 }
 
 export async function logout() {
