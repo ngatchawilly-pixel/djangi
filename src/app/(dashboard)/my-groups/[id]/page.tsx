@@ -4,8 +4,9 @@ import { ArrowLeft, Dices } from 'lucide-react'
 
 import { requireProfile } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
+import { DrawingResultsBoard } from '@/components/seasons/drawing-results-board'
 import { Badge, Card, EmptyState } from '@/components/ui'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, fullName } from '@/lib/utils'
 
 export default async function MyGroupPage({
   params,
@@ -70,6 +71,25 @@ export default async function MyGroupPage({
             .maybeSingle()
         ).data
       : null
+
+  // Tableau des résultats : tous les participants et les numéros déjà tirés.
+  const showBoard = !!season && (season.status === 'drawing' || season.status === 'active')
+
+  const { data: boardMembers } = showBoard
+    ? await supabase
+        .from('members')
+        .select('id, first_name, last_name')
+        .eq('group_id', id)
+        .eq('status', 'active')
+        .order('created_at')
+    : { data: null }
+
+  const { data: boardDrawings } = showBoard
+    ? await supabase
+        .from('drawings')
+        .select('member_id, drawn_number')
+        .eq('season_id', season!.id)
+    : { data: null }
 
   return (
     <div className="space-y-6">
@@ -158,6 +178,19 @@ export default async function MyGroupPage({
           </Card>
         )}
       </section>
+
+      {showBoard && boardMembers && boardMembers.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Participants et numéros</h2>
+          <DrawingResultsBoard
+            seasonId={season!.id}
+            initialMembers={boardMembers.map((m) => ({ id: m.id, name: fullName(m) }))}
+            initialDrawn={Object.fromEntries(
+              (boardDrawings ?? []).map((d) => [d.member_id, d.drawn_number]),
+            )}
+          />
+        </section>
+      )}
     </div>
   )
 }
