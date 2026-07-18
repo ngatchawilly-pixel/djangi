@@ -502,8 +502,10 @@ begin
     if v_count >= v_expected then
         perform public.write_beneficiary_order(
             p_season_id,
-            (select array_agg(member_id order by drawn_number)
-             from public.drawings where season_id = p_season_id),
+            -- Colonnes qualifiées : `drawn_number` est aussi un paramètre de
+            -- sortie de cette fonction, donc non qualifié il est ambigu.
+            (select array_agg(d.member_id order by d.drawn_number)
+             from public.drawings d where d.season_id = p_season_id),
             'individual_drawing'
         );
     end if;
