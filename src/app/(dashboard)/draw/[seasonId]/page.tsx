@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { requireProfile } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { DrawingInterface } from '@/components/seasons/drawing-interface'
+import { DrawingResultsBoard } from '@/components/seasons/drawing-results-board'
+import { fullName } from '@/lib/utils'
 
 export default async function DrawPage({
   params,
@@ -38,13 +40,41 @@ export default async function DrawPage({
         .maybeSingle()
     : { data: null }
 
+  // Tous les participants et l'état du tirage, pour le tableau en direct.
+  const { data: members } = await supabase
+    .from('members')
+    .select('id, first_name, last_name')
+    .eq('group_id', season.group_id)
+    .eq('status', 'active')
+    .order('created_at')
+
+  const { data: allDrawings } = await supabase
+    .from('drawings')
+    .select('member_id, drawn_number')
+    .eq('season_id', seasonId)
+
+  const showBoard =
+    (season.status === 'drawing' || season.status === 'active') && !!members?.length
+
   return (
-    <DrawingInterface
-      seasonId={seasonId}
-      seasonLabel={`${season.name} · ${season.year}`}
-      isOpen={season.status === 'drawing'}
-      isMember={!!membership}
-      alreadyDrawn={existing?.drawn_number ?? null}
-    />
+    <div className="mx-auto max-w-md space-y-8">
+      <DrawingInterface
+        seasonId={seasonId}
+        seasonLabel={`${season.name} · ${season.year}`}
+        isOpen={season.status === 'drawing'}
+        isMember={!!membership}
+        alreadyDrawn={existing?.drawn_number ?? null}
+      />
+
+      {showBoard && (
+        <DrawingResultsBoard
+          seasonId={seasonId}
+          initialMembers={members!.map((m) => ({ id: m.id, name: fullName(m) }))}
+          initialDrawn={Object.fromEntries(
+            (allDrawings ?? []).map((d) => [d.member_id, d.drawn_number]),
+          )}
+        />
+      )}
+    </div>
   )
 }
