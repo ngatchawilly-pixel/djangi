@@ -50,7 +50,6 @@ export default async function SeasonPage({
     .eq('season_id', seasonId)
 
   const drawnBy = new Map(drawings?.map((d) => [d.member_id, d.drawn_number]) ?? [])
-  const withoutAccount = (activeMembers ?? []).filter((m) => !m.user_id)
 
   // L'ordre finalisé, avec le nom des membres.
   const { data: order } = await supabase
@@ -143,9 +142,9 @@ export default async function SeasonPage({
           members={(activeMembers ?? []).map((m) => ({
             id: m.id,
             name: fullName(m),
+            hasAccount: !!m.user_id,
           }))}
           hasPreviousSeason={(completedCount ?? 0) > 0}
-          membersWithoutAccount={withoutAccount.length}
         />
       )}
 

@@ -153,6 +153,25 @@ export async function openIndividualDrawing(
   )
 }
 
+/**
+ * Ordre mixte : certains membres épinglés à une position, le reste complété
+ * soit par mélange ('shuffle'), soit par tirage individuel ('drawing').
+ */
+export async function generateMixedOrder(
+  groupId: string,
+  seasonId: string,
+  pins: { member_id: string; position: number }[],
+  fill: 'shuffle' | 'drawing',
+): Promise<ActionState> {
+  await requireAdmin()
+  return callGenerator(
+    'generate_mixed_order',
+    { p_season_id: seasonId, p_pins: pins, p_fill: fill },
+    groupId,
+    seasonId,
+  )
+}
+
 /** Clôture une saison finalisée (active -> completed). Rend la rotation possible. */
 export async function completeSeason(
   groupId: string,
