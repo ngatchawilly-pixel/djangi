@@ -71,6 +71,43 @@ export async function addMember(
   return { success: `${d.firstName} ${d.lastName} a été ajouté.` }
 }
 
+export type LookupResult = {
+  found: boolean
+  firstName?: string
+  lastName?: string
+  error?: string
+}
+
+/**
+ * Recherche un compte par email EXACT (voir migration 5). Sert à pré-remplir la
+ * fiche et à confirmer que la personne pourra tirer son numéro. Le rattachement
+ * réel reste fait par le trigger à l'insertion — cette fonction n'écrit rien.
+ */
+export async function lookupUserByEmail(email: string): Promise<LookupResult> {
+  await requireAdmin()
+
+  const trimmed = email.trim()
+  if (!trimmed) return { found: false }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('lookup_user_by_email', {
+    p_email: trimmed,
+  })
+
+  if (error) return { found: false, error: 'La recherche a échoué.' }
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { found: boolean; first_name: string | null; last_name: string | null }
+    | undefined
+
+  if (!row?.found) return { found: false }
+  return {
+    found: true,
+    firstName: row.first_name ?? undefined,
+    lastName: row.last_name ?? undefined,
+  }
+}
+
 export async function updateMemberStatus(
   memberId: string,
   groupId: string,
