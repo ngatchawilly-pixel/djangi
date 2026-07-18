@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CalendarPlus, Pencil } from 'lucide-react'
 
-import { requireAdmin } from '@/lib/auth/dal'
+import { requireGroupOwner } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { MemberForm } from '@/components/members/member-form'
 import { MemberRow } from '@/components/members/member-row'
@@ -32,7 +32,7 @@ export default async function GroupDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const profile = await requireAdmin()
+  const profile = await requireGroupOwner(id)
   const supabase = await createClient()
 
   const { data: group } = await supabase

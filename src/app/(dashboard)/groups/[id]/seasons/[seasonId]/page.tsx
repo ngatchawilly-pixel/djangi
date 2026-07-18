@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
-import { requireAdmin } from '@/lib/auth/dal'
+import { requireGroupOwner } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { OrderGenerator } from '@/components/seasons/order-generator'
 import { DrawingStatus } from '@/components/seasons/drawing-status'
@@ -24,7 +24,7 @@ export default async function SeasonPage({
   params: Promise<{ id: string; seasonId: string }>
 }) {
   const { id, seasonId } = await params
-  await requireAdmin()
+  await requireGroupOwner(id)
   const supabase = await createClient()
 
   const { data: season } = await supabase

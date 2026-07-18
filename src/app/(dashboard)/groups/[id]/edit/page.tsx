@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { updateGroup } from '@/actions/groups.actions'
-import { requireAdmin } from '@/lib/auth/dal'
+import { requireGroupOwner } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { GroupForm } from '@/components/groups/group-form'
 import { Card } from '@/components/ui'
@@ -12,7 +12,7 @@ export default async function EditGroupPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  await requireAdmin()
+  await requireGroupOwner(id)
   const supabase = await createClient()
 
   const { data: group } = await supabase

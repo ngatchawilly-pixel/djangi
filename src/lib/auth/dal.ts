@@ -54,3 +54,26 @@ export async function requireAdmin(): Promise<Profile> {
   }
   return profile
 }
+
+/**
+ * Pour les pages de gestion d'un groupe précis. Le rôle Admin ne suffit pas : il
+ * faut être le PROPRIÉTAIRE du groupe. RLS bloque déjà les écritures d'un non-
+ * propriétaire, mais sans ce garde la page d'admin s'ouvrait quand même (via la
+ * policy « membre »), montrant un formulaire qui échouait à chaque action.
+ * Un membre non-propriétaire est renvoyé vers sa vue membre du groupe.
+ */
+export async function requireGroupOwner(groupId: string): Promise<Profile> {
+  const profile = await requireAdmin()
+  const supabase = await createClient()
+  const { data: group } = await supabase
+    .from('tontine_groups')
+    .select('admin_id')
+    .eq('id', groupId)
+    .maybeSingle()
+
+  if (!group) redirect('/groups')
+  if (group.admin_id !== profile.id && profile.role !== 'Super_Admin') {
+    redirect(`/my-groups/${groupId}`)
+  }
+  return profile
+}

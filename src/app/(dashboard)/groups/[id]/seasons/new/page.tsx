@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { createSeason } from '@/actions/seasons.actions'
-import { requireAdmin } from '@/lib/auth/dal'
+import { requireGroupOwner } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { SeasonForm } from '@/components/seasons/season-form'
 import { Alert, Card } from '@/components/ui'
@@ -12,7 +12,7 @@ export default async function NewSeasonPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  await requireAdmin()
+  await requireGroupOwner(id)
   const supabase = await createClient()
 
   const { data: group } = await supabase
