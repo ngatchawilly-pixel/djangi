@@ -32,7 +32,7 @@ export default async function GroupDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  await requireAdmin()
+  const profile = await requireAdmin()
   const supabase = await createClient()
 
   const { data: group } = await supabase
@@ -174,7 +174,12 @@ export default async function GroupDetailPage({
           <Card className="p-0">
             <ul className="divide-y divide-border">
               {members.map((m) => (
-                <MemberRow key={m.id} member={m} groupId={id} />
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  groupId={id}
+                  isCurrentUser={m.user_id === profile.id}
+                />
               ))}
             </ul>
           </Card>

@@ -153,6 +153,24 @@ export async function openIndividualDrawing(
   )
 }
 
+/** Clôture une saison finalisée (active -> completed). Rend la rotation possible. */
+export async function completeSeason(
+  groupId: string,
+  seasonId: string,
+): Promise<ActionState> {
+  await requireAdmin()
+  return callGenerator('complete_season', { p_season_id: seasonId }, groupId, seasonId)
+}
+
+/** Annule un tirage ouvert et ramène la saison en brouillon. */
+export async function cancelDrawing(
+  groupId: string,
+  seasonId: string,
+): Promise<ActionState> {
+  await requireAdmin()
+  return callGenerator('cancel_drawing', { p_season_id: seasonId }, groupId, seasonId)
+}
+
 /**
  * Tirage d'un membre. Aucun identifiant de membre n'est transmis : la fonction
  * SQL le déduit de auth.uid(), donc on ne peut pas tirer à la place d'autrui.

@@ -23,7 +23,15 @@ const STATUS_LABEL: Record<string, string> = {
   left: 'Parti',
 }
 
-export function MemberRow({ member, groupId }: { member: Member; groupId: string }) {
+export function MemberRow({
+  member,
+  groupId,
+  isCurrentUser = false,
+}: {
+  member: Member
+  groupId: string
+  isCurrentUser?: boolean
+}) {
   const [pending, startTransition] = useTransition()
 
   return (
@@ -31,6 +39,7 @@ export function MemberRow({ member, groupId }: { member: Member; groupId: string
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 font-medium">
           {member.first_name} {member.last_name}
+          {isCurrentUser && <Badge tone="neutral">Vous (organisateur)</Badge>}
           {member.user_id && (
             <span
               title="Compte rattaché — ce membre peut se connecter et tirer son numéro"

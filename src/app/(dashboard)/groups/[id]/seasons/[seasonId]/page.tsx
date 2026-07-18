@@ -6,6 +6,8 @@ import { requireAdmin } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { OrderGenerator } from '@/components/seasons/order-generator'
 import { DrawingStatus } from '@/components/seasons/drawing-status'
+import { DrawingShareLink } from '@/components/seasons/drawing-share-link'
+import { SeasonLifecycleActions } from '@/components/seasons/season-lifecycle-actions'
 import { Badge, Card } from '@/components/ui'
 import { formatDate, fullName } from '@/lib/utils'
 
@@ -36,10 +38,19 @@ export default async function SeasonPage({
 
   const { data: activeMembers } = await supabase
     .from('members')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, user_id, email')
     .eq('group_id', id)
     .eq('status', 'active')
     .order('created_at')
+
+  // Qui a déjà tiré ? Sert au récapitulatif nominatif pendant le tirage.
+  const { data: drawings } = await supabase
+    .from('drawings')
+    .select('member_id, drawn_number')
+    .eq('season_id', seasonId)
+
+  const drawnBy = new Map(drawings?.map((d) => [d.member_id, d.drawn_number]) ?? [])
+  const withoutAccount = (activeMembers ?? []).filter((m) => !m.user_id)
 
   // L'ordre finalisé, avec le nom des membres.
   const { data: order } = await supabase
@@ -93,7 +104,36 @@ export default async function SeasonPage({
       </div>
 
       {season.status === 'drawing' && (
-        <DrawingStatus seasonId={seasonId} groupId={id} />
+        <>
+          <DrawingStatus seasonId={seasonId} groupId={id} />
+
+          <DrawingShareLink seasonId={seasonId} />
+
+          <SeasonLifecycleActions groupId={id} seasonId={seasonId} kind="cancel-drawing" />
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-medium">Qui a tiré</h2>
+            <Card className="p-0">
+              <ul className="divide-y divide-border">
+                {(activeMembers ?? []).map((m) => {
+                  const n = drawnBy.get(m.id)
+                  return (
+                    <li key={m.id} className="flex items-center gap-3 p-4">
+                      <span className="flex-1 font-medium">{fullName(m)}</span>
+                      {!m.user_id ? (
+                        <Badge tone="error">Sans compte</Badge>
+                      ) : n !== undefined ? (
+                        <Badge tone="success">N° {n}</Badge>
+                      ) : (
+                        <Badge tone="warning">En attente</Badge>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </Card>
+          </section>
+        </>
       )}
 
       {season.status === 'draft' && (
@@ -105,6 +145,7 @@ export default async function SeasonPage({
             name: fullName(m),
           }))}
           hasPreviousSeason={(completedCount ?? 0) > 0}
+          membersWithoutAccount={withoutAccount.length}
         />
       )}
 
@@ -144,6 +185,16 @@ export default async function SeasonPage({
               })}
             </ol>
           </Card>
+
+          {season.status === 'active' && (
+            <div className="border-t border-border pt-4">
+              <p className="mb-2 text-sm text-muted-foreground">
+                Une fois la saison terminée, clôturez-la : elle pourra servir de base
+                à une rotation lors de la saison suivante.
+              </p>
+              <SeasonLifecycleActions groupId={id} seasonId={seasonId} kind="complete" />
+            </div>
+          )}
         </section>
       )}
     </div>

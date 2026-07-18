@@ -98,11 +98,13 @@ export function OrderGenerator({
   seasonId,
   members,
   hasPreviousSeason,
+  membersWithoutAccount,
 }: {
   groupId: string
   seasonId: string
   members: Member[]
   hasPreviousSeason: boolean
+  membersWithoutAccount: number
 }) {
   const [mode, setMode] = useState<GenerationMode | null>(null)
   const [ordered, setOrdered] = useState<Member[]>(members)
@@ -228,14 +230,35 @@ export function OrderGenerator({
       )}
 
       {mode === 'individual_drawing' && (
-        <Alert tone="success">
-          Seuls les membres ayant un compte rattaché (email renseigné + inscription)
-          pourront tirer. L’ordre se finalisera tout seul dès que tout le monde aura
-          tiré son numéro.
-        </Alert>
+        <>
+          {membersWithoutAccount > 0 ? (
+            <Alert>
+              <strong>
+                {membersWithoutAccount} membre(s) sur {members.length} n’ont pas de
+                compte rattaché
+              </strong>{' '}
+              et ne pourront pas tirer. L’ordre ne se finalisera jamais tant qu’il en
+              manque un seul. Faites-les d’abord s’inscrire avec l’email exact de leur
+              fiche, ou choisissez un autre mode.
+            </Alert>
+          ) : (
+            <Alert tone="success">
+              Les {members.length} membres ont un compte rattaché. Après ouverture, un
+              lien de tirage à partager s’affichera ici. L’ordre se finalisera tout
+              seul dès que le dernier aura tiré.
+            </Alert>
+          )}
+        </>
       )}
 
-      <Button onClick={run} disabled={!mode || pending}>
+      <Button
+        onClick={run}
+        disabled={
+          !mode ||
+          pending ||
+          (mode === 'individual_drawing' && membersWithoutAccount > 0)
+        }
+      >
         {pending && <Loader2 className="size-4 animate-spin" />}
         {mode === 'individual_drawing' ? 'Ouvrir le tirage' : 'Générer l’ordre'}
       </Button>
