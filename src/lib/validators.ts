@@ -86,6 +86,16 @@ export const memberSchema = z.object({
   status: z.enum(['active', 'suspended', 'excluded', 'left']).default('active'),
 })
 
+export const profileSchema = z.object({
+  firstName: z.string().min(1, 'Prénom requis').max(80),
+  lastName: z.string().min(1, 'Nom requis').max(80),
+  phone: z
+    .string()
+    .regex(phoneRegex, 'Numéro invalide (ex. +237 6 12 34 56 78)')
+    .optional()
+    .or(z.literal('')),
+})
+
 export const seasonSchema = z
   .object({
     name: z.string().min(1, 'Nom requis').max(120),
